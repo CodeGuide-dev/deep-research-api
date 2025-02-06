@@ -14,7 +14,18 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      'https://app.codeguide.dev',
+      'http://localhost:3000',
+      'http://localhost:3001',
+    ],
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key'],
+  }),
+);
+
 app.use(express.json());
 app.use(clerkMiddleware())
 
