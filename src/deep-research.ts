@@ -1,8 +1,12 @@
 import FirecrawlApp, { SearchResponse } from '@mendable/firecrawl-js';
 import { generateObject } from 'ai';
-import { compact } from 'lodash-es';
+import { compact } from 'lodash';
 import pLimit from 'p-limit';
 import { z } from 'zod';
+
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 import { o3MiniModel, trimPrompt } from './ai/providers';
 import { systemPrompt } from './prompt';
@@ -37,13 +41,12 @@ async function generateSerpQueries({
   const res = await generateObject({
     model: o3MiniModel,
     system: systemPrompt(),
-    prompt: `Given the following prompt from the user, generate a list of SERP queries to research the topic. Return a maximum of ${numQueries} queries, but feel free to return less if the original prompt is clear. Make sure each query is unique and not similar to each other: <prompt>${query}</prompt>\n\n${
-      learnings
-        ? `Here are some learnings from previous research, use them to generate more specific queries: ${learnings.join(
-            '\n',
-          )}`
-        : ''
-    }`,
+    prompt: `Given the following prompt from the user, generate a list of SERP queries to research the topic. Return a maximum of ${numQueries} queries, but feel free to return less if the original prompt is clear. Make sure each query is unique and not similar to each other: <prompt>${query}</prompt>\n\n${learnings
+      ? `Here are some learnings from previous research, use them to generate more specific queries: ${learnings.join(
+        '\n',
+      )}`
+      : ''
+      }`,
     schema: z.object({
       queries: z
         .array(
