@@ -186,7 +186,7 @@ Start the API server:
 npm run dev
 ```
 
-The API will be available at `http://localhost:3000` with documentation at `http://localhost:3000/docs`.
+The API will be available at `http://localhost:3000` with documentation at `http://localhost:3000/api-docs`.
 
 ## License
 
