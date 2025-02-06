@@ -25,6 +25,12 @@ const options: swaggerJsdoc.Options = {
                     in: 'header',
                     name: 'x-api-key',
                     description: 'API key for authentication'
+                },
+                BearerAuth: {
+                    type: 'http',
+                    scheme: 'bearer',
+                    bearerFormat: 'JWT',
+                    description: 'Clerk session token'
                 }
             },
             schemas: {
@@ -159,6 +165,9 @@ const options: swaggerJsdoc.Options = {
         security: [
             {
                 ApiKeyAuth: []
+            },
+            {
+                BearerAuth: []
             }
         ]
     },
