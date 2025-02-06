@@ -91,22 +91,25 @@ flowchart TB
 
 ## API Usage
 
-The API is accessible at `https://api.codeguide.dev/research`. Detailed API documentation is available at `https://api.codeguide.dev/docs`.
+You can access the API locally or by self-hosting it.
 
 ### Authentication
 
-All API requests require authentication using your CodeGuide API key. Include it in the request header:
+All API requests require authentication that will be defined in the `.env` file.
 
 ```bash
-x-api-key: API_KEY
+# .env
+API_KEY="your_development_api_key"
 ```
+
 
 ### Example Request
 
 ```bash
-curl -X POST https://api.codeguide.dev/research \
+curl -X POST http://localhost:3000/research \
   -H "x-api-key: API_KEY" \
   -H "Content-Type: application/json" \
+
 
   -d '{
     "query": "Your research query",
@@ -124,7 +127,7 @@ curl -X POST https://api.codeguide.dev/research \
 npm install
 ```
 
-3. Set up environment variables in a `.env.local` file:
+3. Set up environment variables in a `.env` file:
 
 ```bash
 FIRECRAWL_KEY="your_firecrawl_key"
