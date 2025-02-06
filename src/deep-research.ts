@@ -15,6 +15,11 @@ import { systemPrompt } from './prompt.js';
 type ResearchResult = {
   learnings: string[];
   visitedUrls: string[];
+  usage: {
+    totalTokens: number;
+    promptTokens: number;
+    completionTokens: number;
+  };
 };
 
 // increase this if you have higher API rate limits
@@ -68,7 +73,10 @@ async function generateSerpQueries({
     res.object.queries,
   );
 
-  return res.object.queries.slice(0, numQueries);
+  return {
+    queries: res.object.queries.slice(0, numQueries),
+    usage: res.usage,
+  };
 }
 
 async function processSerpResult({
@@ -110,7 +118,10 @@ async function processSerpResult({
     res.object.learnings,
   );
 
-  return res.object;
+  return {
+    ...res.object,
+    usage: res.usage,
+  };
 }
 
 export async function writeFinalReport({
@@ -142,7 +153,10 @@ export async function writeFinalReport({
 
   // Append the visited URLs section to the report
   const urlsSection = `\n\n## Sources\n\n${visitedUrls.map(url => `- ${url}`).join('\n')}`;
-  return res.object.reportMarkdown + urlsSection;
+  return {
+    reportMarkdown: res.object.reportMarkdown + urlsSection,
+    usage: res.usage,
+  };
 }
 
 export async function deepResearch({
@@ -151,79 +165,110 @@ export async function deepResearch({
   depth,
   learnings = [],
   visitedUrls = [],
+  firecrawlKey,
 }: {
   query: string;
   breadth: number;
   depth: number;
   learnings?: string[];
   visitedUrls?: string[];
+  firecrawlKey?: string;
 }): Promise<ResearchResult> {
-  const serpQueries = await generateSerpQueries({
+  // Create a new Firecrawl instance if a custom key is provided
+  const client = firecrawlKey ? new FirecrawlApp({
+    apiKey: firecrawlKey,
+    apiUrl: process.env.FIRECRAWL_BASE_URL,
+  }) : firecrawl;
+
+  const serpQueriesResult = await generateSerpQueries({
     query,
     learnings,
     numQueries: breadth,
   });
   const limit = pLimit(ConcurrencyLimit);
 
-  const results = await Promise.all(
-    serpQueries.map(serpQuery =>
-      limit(async () => {
-        try {
-          const result = await firecrawl.search(serpQuery.query, {
-            timeout: 15000,
-            limit: 5,
-            scrapeOptions: { formats: ['markdown'] },
+  const promises = serpQueriesResult.queries.map((serpQuery) => {
+    return limit(async () => {
+      try {
+        const result = await client.search(serpQuery.query, {
+          timeout: 15000,
+          limit: 5,
+          scrapeOptions: { formats: ['markdown'] },
+        });
+
+        // Collect URLs from this search
+        const newUrls = compact(result.data.map(item => item.url));
+        const newBreadth = Math.ceil(breadth / 2);
+        const newDepth = depth - 1;
+
+        const newLearningsResult = await processSerpResult({
+          query: serpQuery.query,
+          result,
+          numFollowUpQuestions: newBreadth,
+        });
+        const allLearnings = [...learnings, ...newLearningsResult.learnings];
+        const allUrls = [...visitedUrls, ...newUrls];
+
+        if (newDepth > 0) {
+          console.log(
+            `Researching deeper, breadth: ${newBreadth}, depth: ${newDepth}`,
+          );
+
+          const nextQuery = `
+          Previous research goal: ${serpQuery.researchGoal}
+          Follow-up research directions: ${newLearningsResult.followUpQuestions.map(q => `\n${q}`).join('')}
+        `.trim();
+
+          return deepResearch({
+            query: nextQuery,
+            breadth: newBreadth,
+            depth: newDepth,
+            learnings: allLearnings,
+            visitedUrls: allUrls,
+            firecrawlKey,
           });
-
-          // Collect URLs from this search
-          const newUrls = compact(result.data.map(item => item.url));
-          const newBreadth = Math.ceil(breadth / 2);
-          const newDepth = depth - 1;
-
-          const newLearnings = await processSerpResult({
-            query: serpQuery.query,
-            result,
-            numFollowUpQuestions: newBreadth,
-          });
-          const allLearnings = [...learnings, ...newLearnings.learnings];
-          const allUrls = [...visitedUrls, ...newUrls];
-
-          if (newDepth > 0) {
-            console.log(
-              `Researching deeper, breadth: ${newBreadth}, depth: ${newDepth}`,
-            );
-
-            const nextQuery = `
-            Previous research goal: ${serpQuery.researchGoal}
-            Follow-up research directions: ${newLearnings.followUpQuestions.map(q => `\n${q}`).join('')}
-          `.trim();
-
-            return deepResearch({
-              query: nextQuery,
-              breadth: newBreadth,
-              depth: newDepth,
-              learnings: allLearnings,
-              visitedUrls: allUrls,
-            });
-          } else {
-            return {
-              learnings: allLearnings,
-              visitedUrls: allUrls,
-            };
-          }
-        } catch (e) {
-          console.error(`Error running query: ${serpQuery.query}: `, e);
+        } else {
           return {
-            learnings: [],
-            visitedUrls: [],
+            learnings: allLearnings,
+            visitedUrls: allUrls,
+            usage: {
+              totalTokens: serpQueriesResult.usage.totalTokens + newLearningsResult.usage.totalTokens,
+              promptTokens: serpQueriesResult.usage.promptTokens + newLearningsResult.usage.promptTokens,
+              completionTokens: serpQueriesResult.usage.completionTokens + newLearningsResult.usage.completionTokens,
+            },
           };
         }
-      }),
-    ),
-  );
+      } catch (e) {
+        console.error(`Error running query: ${serpQuery.query}: `, e);
+        return {
+          learnings: [],
+          visitedUrls: [],
+          usage: {
+            totalTokens: serpQueriesResult.usage.totalTokens,
+            promptTokens: serpQueriesResult.usage.promptTokens,
+            completionTokens: serpQueriesResult.usage.completionTokens,
+          },
+        };
+      }
+    });
+  });
+
+  const results = await Promise.all(promises) as ResearchResult[];
+
+  // Aggregate usage across all results
+  const totalUsage = results.reduce((acc, curr) => ({
+    totalTokens: acc.totalTokens + curr.usage.totalTokens,
+    promptTokens: acc.promptTokens + curr.usage.promptTokens,
+    completionTokens: acc.completionTokens + curr.usage.completionTokens,
+  }), {
+    totalTokens: 0,
+    promptTokens: 0,
+    completionTokens: 0,
+  });
 
   return {
     learnings: [...new Set(results.flatMap(r => r.learnings))],
     visitedUrls: [...new Set(results.flatMap(r => r.visitedUrls))],
+    usage: totalUsage,
   };
 }

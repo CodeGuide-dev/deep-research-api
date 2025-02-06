@@ -43,7 +43,7 @@ async function run() {
 
   // Collect answers to follow-up questions
   const answers: string[] = [];
-  for (const question of followUpQuestions) {
+  for (const question of followUpQuestions.questions) {
     const answer = await askQuestion(`\n${question}\nYour answer: `);
     answers.push(answer);
   }
@@ -52,7 +52,7 @@ async function run() {
   const combinedQuery = `
 Initial Query: ${initialQuery}
 Follow-up Questions and Answers:
-${followUpQuestions.map((q, i) => `Q: ${q}\nA: ${answers[i]}`).join('\n')}
+${followUpQuestions.questions.map((q, i) => `Q: ${q}\nA: ${answers[i]}`).join('\n')}
 `;
 
   console.log('\nResearching your topic...');
@@ -74,11 +74,12 @@ ${followUpQuestions.map((q, i) => `Q: ${q}\nA: ${answers[i]}`).join('\n')}
   });
 
   // Save report to file
-  await fs.writeFile('output.md', report, 'utf-8');
+  await fs.writeFile('output.md', report.reportMarkdown, 'utf-8');
 
-  console.log(`\n\nFinal Report:\n\n${report}`);
+  console.log(`\n\nFinal Report:\n\n${report.reportMarkdown}`);
   console.log('\nReport has been saved to output.md');
   rl.close();
+
 }
 
 run().catch(console.error);

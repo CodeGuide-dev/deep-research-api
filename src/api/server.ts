@@ -5,7 +5,7 @@ import { deepResearch, writeFinalReport } from '../deep-research.js';
 import { specs } from './swagger.js';
 import { validateApiKey } from './middleware/auth.js';
 import dotenv from 'dotenv';
-import { generateFeedback } from '../feedback.js';
+import { generateFeedback, FeedbackResult } from '../feedback.js';
 
 dotenv.config();
 
@@ -29,6 +29,7 @@ interface ResearchRequest {
     query: string;
     breadth: number;
     depth: number;
+    firecrawlKey?: string;
     questionAnswers?: { question: string; answer: string }[];
 }
 
@@ -84,12 +85,12 @@ const handleResearchQuestions: RequestHandler = async (req, res, next) => {
             return;
         }
 
-        const questions = await generateFeedback({
+        const result: FeedbackResult = await generateFeedback({
             query,
             numQuestions
         });
 
-        res.json({ questions });
+        res.json(result);
     } catch (error) {
         console.error('Research questions generation error:', error);
         next(error);
@@ -144,7 +145,7 @@ const handleResearchQuestions: RequestHandler = async (req, res, next) => {
  */
 const handleResearch: RequestHandler = async (req, res, next) => {
     try {
-        const { query, breadth, depth, questionAnswers } = req.body as ResearchRequest;
+        const { query, breadth, depth, questionAnswers, firecrawlKey } = req.body as ResearchRequest;
 
         if (!query || !breadth || !depth) {
             res.status(400).json({ error: 'Missing required parameters' });
@@ -163,7 +164,8 @@ const handleResearch: RequestHandler = async (req, res, next) => {
         const result = await deepResearch({
             query: enhancedQuery,
             breadth,
-            depth
+            depth,
+            firecrawlKey
         });
 
         res.json(result);
@@ -228,13 +230,16 @@ const handleReport: RequestHandler = async (req, res, next) => {
             return;
         }
 
-        const report = await writeFinalReport({
+        const result = await writeFinalReport({
             prompt,
             learnings,
             visitedUrls
         });
 
-        res.json({ report });
+        res.json({
+            report: result.reportMarkdown,
+            usage: result.usage,
+        });
     } catch (error) {
         console.error('Report generation error:', error);
         next(error);

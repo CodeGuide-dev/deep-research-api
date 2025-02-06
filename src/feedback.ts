@@ -4,13 +4,22 @@ import { z } from 'zod';
 import { o3MiniModel } from './ai/providers.js';
 import { systemPrompt } from './prompt.js';
 
+export type FeedbackResult = {
+  questions: string[];
+  usage: {
+    totalTokens: number;
+    promptTokens: number;
+    completionTokens: number;
+  };
+};
+
 export async function generateFeedback({
   query,
   numQuestions = 3,
 }: {
   query: string;
   numQuestions?: number;
-}) {
+}): Promise<FeedbackResult> {
   const userFeedback = await generateObject({
     model: o3MiniModel,
     system: systemPrompt(),
@@ -24,5 +33,8 @@ export async function generateFeedback({
     }),
   });
 
-  return userFeedback.object.questions.slice(0, numQuestions);
+  return {
+    questions: userFeedback.object.questions.slice(0, numQuestions),
+    usage: userFeedback.usage,
+  };
 }

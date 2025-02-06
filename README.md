@@ -102,21 +102,58 @@ All API requests require authentication that will be defined in the `.env` file.
 API_KEY="your_development_api_key"
 ```
 
+### Research Flow
 
-### Example Request
+The research process consists of three main steps:
 
+1. **Generate Clarifying Questions**
 ```bash
-curl -X POST http://localhost:3000/research \
+# Step 1: Generate questions to better understand the research direction
+curl -X POST http://localhost:3000/api/research/questions \
   -H "x-api-key: API_KEY" \
   -H "Content-Type: application/json" \
+  -d '{
+    "query": "Your research query",
+    "numQuestions": 3
+  }'
+```
 
-
+2. **Perform Deep Research**
+```bash
+# Step 2: Conduct the research with your answers to the clarifying questions
+curl -X POST http://localhost:3000/api/research \
+  -H "x-api-key: API_KEY" \
+  -H "Content-Type: application/json" \
   -d '{
     "query": "Your research query",
     "breadth": 6,
-    "depth": 3
+    "depth": 3,
+    "questionAnswers": [
+      {
+        "question": "Question from step 1",
+        "answer": "Your answer to the question"
+      }
+    ]
   }'
 ```
+
+3. **Generate Final Report**
+```bash
+# Step 3: Generate a comprehensive report using the research results
+curl -X POST http://localhost:3000/api/report \
+  -H "x-api-key: API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Original research query",
+    "learnings": ["Learning 1", "Learning 2"],  # From research response
+    "visitedUrls": ["url1", "url2"]            # From research response
+  }'
+```
+
+The flow allows for an iterative and thorough research process:
+1. First, generate clarifying questions to better understand the research needs
+2. Use these questions and your answers to guide the deep research process
+3. Finally, generate a comprehensive report based on the research findings
 
 ## Local Development Setup
 

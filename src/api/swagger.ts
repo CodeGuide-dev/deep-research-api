@@ -44,6 +44,10 @@ const options: swaggerJsdoc.Options = {
                             type: 'number',
                             description: 'Depth of the recursive research process'
                         },
+                        firecrawlKey: {
+                            type: 'string',
+                            description: 'Optional Firecrawl API key. If not provided, will use the server\'s default key'
+                        },
                         questionAnswers: {
                             type: 'array',
                             items: {
