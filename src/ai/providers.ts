@@ -1,7 +1,8 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { getEncoding } from 'js-tiktoken';
 
-import { RecursiveCharacterTextSplitter } from './text-splitter';
+import { RecursiveCharacterTextSplitter } from './text-splitter.js';
+
 
 // Providers
 

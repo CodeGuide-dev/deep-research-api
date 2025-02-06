@@ -1,8 +1,8 @@
 import { generateObject } from 'ai';
 import { z } from 'zod';
 
-import { o3MiniModel } from './ai/providers';
-import { systemPrompt } from './prompt';
+import { o3MiniModel } from './ai/providers.js';
+import { systemPrompt } from './prompt.js';
 
 export async function generateFeedback({
   query,

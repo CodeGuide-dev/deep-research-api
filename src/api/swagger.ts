@@ -43,6 +43,23 @@ const options: swaggerJsdoc.Options = {
                         depth: {
                             type: 'number',
                             description: 'Depth of the recursive research process'
+                        },
+                        questionAnswers: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    question: {
+                                        type: 'string',
+                                        description: 'The feedback question'
+                                    },
+                                    answer: {
+                                        type: 'string',
+                                        description: 'The user\'s answer to the feedback question'
+                                    }
+                                }
+                            },
+                            description: 'Optional answers to feedback questions'
                         }
                     }
                 },
@@ -104,6 +121,32 @@ const options: swaggerJsdoc.Options = {
                         error: {
                             type: 'string',
                             description: 'Error message'
+                        }
+                    }
+                },
+                ResearchQuestionsRequest: {
+                    type: 'object',
+                    required: ['query'],
+                    properties: {
+                        query: {
+                            type: 'string',
+                            description: 'The research query to generate clarifying questions for'
+                        },
+                        numQuestions: {
+                            type: 'number',
+                            description: 'Optional number of questions to generate (default: 3)'
+                        }
+                    }
+                },
+                ResearchQuestionsResponse: {
+                    type: 'object',
+                    properties: {
+                        questions: {
+                            type: 'array',
+                            items: {
+                                type: 'string'
+                            },
+                            description: 'List of generated clarifying questions'
                         }
                     }
                 }

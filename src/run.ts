@@ -1,8 +1,9 @@
 import * as fs from 'fs/promises';
 import * as readline from 'readline';
 
-import { deepResearch, writeFinalReport } from './deep-research';
-import { generateFeedback } from './feedback';
+import { deepResearch, writeFinalReport } from './deep-research.js';
+import { generateFeedback } from './feedback.js';
+
 
 const rl = readline.createInterface({
   input: process.stdin,

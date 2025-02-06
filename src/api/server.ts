@@ -1,10 +1,11 @@
 import express, { Request, Response, NextFunction, RequestHandler } from 'express';
 import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
-import { deepResearch, writeFinalReport } from '../deep-research';
-import { specs } from './swagger';
-import { validateApiKey } from './middleware/auth';
+import { deepResearch, writeFinalReport } from '../deep-research.js';
+import { specs } from './swagger.js';
+import { validateApiKey } from './middleware/auth.js';
 import dotenv from 'dotenv';
+import { generateFeedback } from '../feedback.js';
 
 dotenv.config();
 
@@ -19,10 +20,16 @@ app.use(express.json());
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 // Types
+interface ResearchQuestionsRequest {
+    query: string;
+    numQuestions?: number;
+}
+
 interface ResearchRequest {
     query: string;
     breadth: number;
     depth: number;
+    questionAnswers?: { question: string; answer: string }[];
 }
 
 interface ReportRequest {
@@ -35,6 +42,58 @@ interface ReportRequest {
 const errorHandler = (err: Error, req: Request, res: Response, next: NextFunction): void => {
     console.error(err.stack);
     res.status(500).json({ error: 'Something went wrong!' });
+};
+
+/**
+ * @swagger
+ * /api/research/questions:
+ *   post:
+ *     summary: Generate clarifying questions for research query
+ *     description: First step in the research process - generates questions to better understand the research direction
+ *     tags: [Research]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ResearchQuestionsRequest'
+ *     responses:
+ *       200:
+ *         description: Generated clarifying questions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ResearchQuestionsResponse'
+ *       400:
+ *         description: Missing or invalid parameters
+ *       401:
+ *         description: API key is missing
+ *       403:
+ *         description: Invalid API key
+ *       500:
+ *         description: Server error
+ */
+const handleResearchQuestions: RequestHandler = async (req, res, next) => {
+    try {
+        const { query, numQuestions } = req.body as ResearchQuestionsRequest;
+
+        if (!query) {
+            res.status(400).json({ error: 'Missing required parameters' });
+            return;
+        }
+
+        const questions = await generateFeedback({
+            query,
+            numQuestions
+        });
+
+        res.json({ questions });
+    } catch (error) {
+        console.error('Research questions generation error:', error);
+        next(error);
+    }
 };
 
 /**
@@ -85,15 +144,24 @@ const errorHandler = (err: Error, req: Request, res: Response, next: NextFunctio
  */
 const handleResearch: RequestHandler = async (req, res, next) => {
     try {
-        const { query, breadth, depth } = req.body as ResearchRequest;
+        const { query, breadth, depth, questionAnswers } = req.body as ResearchRequest;
 
         if (!query || !breadth || !depth) {
             res.status(400).json({ error: 'Missing required parameters' });
             return;
         }
 
+        // If we have question answers, append them to the query
+        let enhancedQuery = query;
+        if (questionAnswers && questionAnswers.length > 0) {
+            const answersText = questionAnswers
+                .map(qa => `${qa.question}\nAnswer: ${qa.answer}`)
+                .join('\n\n');
+            enhancedQuery = `${query}\n\nAdditional Context:\n${answersText}`;
+        }
+
         const result = await deepResearch({
-            query,
+            query: enhancedQuery,
             breadth,
             depth
         });
@@ -196,6 +264,7 @@ app.get('/health', (_req: Request, res: Response) => {
 });
 
 // Register routes
+app.post('/api/research/questions', validateApiKey, handleResearchQuestions);
 app.post('/api/research', validateApiKey, handleResearch);
 app.post('/api/report', validateApiKey, handleReport);
 
