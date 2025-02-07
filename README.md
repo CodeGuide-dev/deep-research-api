@@ -9,6 +9,7 @@ An AI-powered research assistant that performs iterative, deep research on any t
 The core functionality remains true to the original project's goal of providing a simple implementation of a deep research agent - one that can refine its research direction overtime and deep dive into a topic.
 
 ## Access
+<img width="692" alt="Screenshot 2025-02-07 at 22 37 01" src="https://github.com/user-attachments/assets/9f7566f6-860e-41fc-9e68-54b6e9ca09a6" />
 
 This service is available to all CodeGuide members at [app.codeguide.dev](https://app.codeguide.dev).
 You'll have access to the following features:
@@ -19,7 +20,6 @@ You'll have access to the following features:
 
 
 ## How It Works
-
 ```mermaid
 flowchart TB
     subgraph Input
