@@ -6,6 +6,7 @@ import { specs } from './swagger.js';
 import { validateApiKey } from './middleware/auth.js';
 import dotenv from 'dotenv';
 import { generateFeedback, FeedbackResult } from '../feedback.js';
+import { clerkMiddleware } from '@clerk/express'
 
 dotenv.config();
 
@@ -13,8 +14,20 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      'https://app.codeguide.dev',
+      'http://localhost:3000',
+      'http://localhost:3001',
+    ],
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key'],
+  }),
+);
+
 app.use(express.json());
+app.use(clerkMiddleware())
 
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
@@ -54,6 +67,7 @@ const errorHandler = (err: Error, req: Request, res: Response, next: NextFunctio
  *     tags: [Research]
  *     security:
  *       - ApiKeyAuth: []
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -105,6 +119,7 @@ const handleResearchQuestions: RequestHandler = async (req, res, next) => {
  *     tags: [Research]
  *     security:
  *       - ApiKeyAuth: []
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -183,6 +198,7 @@ const handleResearch: RequestHandler = async (req, res, next) => {
  *     tags: [Report]
  *     security:
  *       - ApiKeyAuth: []
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
